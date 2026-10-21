@@ -4,4 +4,4 @@ argument-hint: kill|pause|off [youtube|instagram|tiktok]
 ---
 reels-args: $ARGUMENTS
 
-The reel-break hook should have handled this command before it reached you. Tell the user in one line that the reel-break hook didn't run (it needs Windows with PowerShell and Edge) and that `/hooks` shows whether it's loaded.
+Reply with only the text after "Reel Break status: " from the hook context, verbatim, and nothing else. If there is no such line, say in one line that the reel-break hook didn't run (it needs Windows with PowerShell and Edge).

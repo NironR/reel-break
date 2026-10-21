@@ -53,21 +53,16 @@ function Set-Mode([string[]]$words) {
     New-Item -ItemType Directory -Force $data | Out-Null
     $state | ConvertTo-Json | Set-Content $stateFile
     $status = if ($state.mode -eq 'off') { 'Reels off.' } else { "Reels on: $($state.mode) mode, $($state.site). They'll open with your next prompt." }
-    # Blocking means /reels never reaches Claude: no tokens, no reels for the toggle itself. The app shows it as a "blocked" card.
-    @{ decision = 'block'; reason = "$status (Not an error: /reels is handled without asking Claude.) Options: /reels kill|pause|off youtube|instagram|tiktok" } | ConvertTo-Json -Compress
-    exit 0
+    "$status Options: /reels kill|pause|off youtube|instagram|tiktok"
 }
 
 $in = [Console]::In.ReadToEnd() | ConvertFrom-Json
 switch ($Hook) {
-    'expand' {
-        # The app doesn't always fill `args`, so commands/reels.md also echoes them into the expanded prompt.
-        $words = "$($in.args -join ' ') $(if ($in.expanded_prompt -match 'reels-args:([^\r\n]*)') { $Matches[1] })"
-        if ($in.command_name -match 'reels$') { Set-Mode ($words -split '\s+' | Where-Object { $_ }) }
-    }
     'open' {
-        # Headless runs (claude -p) skip the expansion event and send /reels here raw.
-        if ($in.prompt -match '^\s*/(reel-break:)?reels\b(.*)') { Set-Mode ($Matches[2] -split '\s+' | Where-Object { $_ }) }
+        # /reels isn't blocked (a block always shows a "blocked" card), so it arrives here: expanded in the app
+        # (commands/reels.md writes "reels-args: <words>"), raw in headless runs. Stdout becomes context for Claude's one-line reply.
+        $words = if ($in.prompt -match 'reels-args:([^\r\n]*)') { $Matches[1] } elseif ($in.prompt -match '^\s*/(reel-break:)?reels\b(.*)') { $Matches[2] }
+        if ($null -ne $words) { "Reel Break status: " + (Set-Mode ($words -split '\s+' | Where-Object { $_ })); exit 0 }
         if ($state.mode -eq 'off') { exit 0 }
         if (Get-ReelsBrowser) {
             if ($state.mode -eq 'pause') { Set-Playing $true }

@@ -24,7 +24,7 @@ Then start a new Claude Code session (terminal or the desktop app's Code tab).
 | `/reels off` | Off (default) |
 | `/reels youtube` / `instagram` / `tiktok` | Pick the feed (combine: `/reels pause tiktok`) |
 
-`/reels` shows up as "A hook blocked your prompt". That's expected: the toggle is handled without asking Claude, so it costs no tokens.
+After `/reels`, Claude replies with a one-line status (a tiny turn, a few hundred tokens). Reels don't open for that turn.
 
 Reels run in a separate Edge window with its own profile, so your normal browser is never touched. To log in to Instagram/TikTok: `/reels pause instagram`, send any prompt, log in in the window that opens (pause mode keeps it open), then `/reels kill`. The login is remembered.
 
