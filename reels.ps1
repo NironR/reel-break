@@ -72,7 +72,9 @@ switch ($Hook) {
         if (Get-ReelsBrowser) {
             if ($state.mode -eq 'pause') { Set-Playing $true }
         } else {
-            Start-Process msedge "--app=$($sites[$state.site]) --user-data-dir=`"$profileDir`" --remote-debugging-port=0 --no-first-run --hide-crash-restore-bubble"
+            # The DevTools port lets any local program read this window's cookies, so only pause mode (which needs it) opens it.
+            $debug = if ($state.mode -eq 'pause') { '--remote-debugging-port=0' } else { '' }
+            Start-Process msedge "--app=$($sites[$state.site]) --user-data-dir=`"$profileDir`" $debug --no-first-run --hide-crash-restore-bubble"
         }
     }
     'close' {

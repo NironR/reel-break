@@ -31,5 +31,5 @@ Reels run in a separate Edge window with its own profile, so your normal browser
 ## Good to know
 
 - Windows + Microsoft Edge only (Edge is preinstalled).
-- Pause mode opens a DevTools port on `127.0.0.1` for the reels window, so other programs on your PC could control that window (and the accounts logged in there). It never touches your normal browser.
+- Pause mode opens a DevTools port on `127.0.0.1` for the reels window, so other programs on your PC (including a Claude session with shell access) could read that window's cookies and take over the accounts logged in there. Websites can't reach it and your normal browser is never touched. Kill mode doesn't open the port. If that matters to you, stick to kill mode, or use pause mode only with feeds you're not logged in to.
 - Settings and the reels browser profile live in `~\.claude\reel-break`. Delete that folder to reset or log out.
