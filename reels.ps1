@@ -48,6 +48,41 @@ function Set-Playing([bool]$play) {
     } catch {}
 }
 
+# Windows won't let a background process (like this hook) pull a window to the front, so new windows open
+# behind Claude. Attaching to the foreground window's input thread lifts that restriction for one call.
+function Show-ReelsWindow {
+    Add-Type -Namespace RB -Name W -MemberDefinition @'
+[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+[DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, IntPtr pid);
+[DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+[DllImport("user32.dll")] public static extern bool AttachThreadInput(uint from, uint to, bool attach);
+[DllImport("user32.dll")] public static extern bool IsIconic(IntPtr hWnd);
+[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int cmd);
+[DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr hWnd);
+[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
+'@
+    $h = [IntPtr]::Zero
+    foreach ($i in 1..40) {
+        $browser = Get-ReelsBrowser | Where-Object { $_.CommandLine -notlike '*--type=*' } | Select-Object -First 1
+        if ($browser) { $h = (Get-Process -Id $browser.ProcessId).MainWindowHandle }
+        if ($h -ne [IntPtr]::Zero) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if ($h -eq [IntPtr]::Zero) { return }
+    $fg = [RB.W]::GetWindowThreadProcessId([RB.W]::GetForegroundWindow(), [IntPtr]::Zero)
+    $me = [RB.W]::GetCurrentThreadId()
+    [RB.W]::AttachThreadInput($me, $fg, $true) | Out-Null
+    if ([RB.W]::IsIconic($h)) { [RB.W]::ShowWindow($h, 9) | Out-Null }
+    [RB.W]::BringWindowToTop($h) | Out-Null
+    [RB.W]::SetForegroundWindow($h) | Out-Null
+    [RB.W]::AttachThreadInput($me, $fg, $false) | Out-Null
+}
+
+# Waiting for the window takes a few seconds, so do it in a detached process instead of delaying your prompt.
+function Start-Front {
+    Start-Process powershell -WindowStyle Hidden -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" front"
+}
+
 function Set-Mode([string[]]$words) {
     $login = $false
     foreach ($a in $words) {
@@ -65,14 +100,17 @@ function Set-Mode([string[]]$words) {
         # A normal window (address bar, no DevTools port): Google refuses sign-in when the port is open.
         Start-Sleep 1
         Start-Process msedge "--user-data-dir=`"$profileDir`" --no-first-run $($logins[$state.site])"
+        Start-Front
         return "Opened a $($state.site) login window. Reels are off while you log in. When you're done, close it and run /reels kill $($state.site)."
     }
     $status = if ($state.mode -eq 'off') { 'Reels off.' } else { "Reels on: $($state.mode) mode, $($state.site). They'll open with your next prompt." }
     "$status Options: /reels kill|pause|off|login youtube|instagram|tiktok"
 }
 
-$in = [Console]::In.ReadToEnd() | ConvertFrom-Json
+# The detached 'front' helper has no hook input on stdin; reading it would hang.
+if ($Hook -ne 'front') { $in = [Console]::In.ReadToEnd() | ConvertFrom-Json }
 switch ($Hook) {
+    'front' { Show-ReelsWindow }
     'open' {
         # /reels isn't blocked (a block always shows a "blocked" card), so it arrives here: expanded in the app
         # (commands/reels.md writes "reels-args: <words>"), raw in headless runs. Stdout becomes context for Claude's one-line reply.
@@ -86,6 +124,7 @@ switch ($Hook) {
             $debug = if ($state.mode -eq 'pause') { '--remote-debugging-port=0' } else { '' }
             Start-Process msedge "--app=$($sites[$state.site]) --user-data-dir=`"$profileDir`" $debug --no-first-run --hide-crash-restore-bubble"
         }
+        Start-Front
     }
     'close' {
         if ($state.mode -eq 'kill') { Stop-ReelsBrowser }
