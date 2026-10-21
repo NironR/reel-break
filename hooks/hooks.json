@@ -1,0 +1,20 @@
+{
+  "description": "Open reels when you send a prompt, kill or pause them when Claude is done",
+  "hooks": {
+    "UserPromptExpansion": [
+      { "hooks": [{ "type": "command", "command": "powershell", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/reels.ps1", "expand"] }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "powershell", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/reels.ps1", "open"] }] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "powershell", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/reels.ps1", "close"] }] }
+    ],
+    "StopFailure": [
+      { "hooks": [{ "type": "command", "command": "powershell", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/reels.ps1", "close"] }] }
+    ],
+    "Notification": [
+      { "matcher": "permission_prompt|elicitation_dialog", "hooks": [{ "type": "command", "command": "powershell", "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${CLAUDE_PLUGIN_ROOT}/reels.ps1", "close"] }] }
+    ]
+  }
+}

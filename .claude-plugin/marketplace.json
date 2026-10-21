@@ -1,0 +1,12 @@
+{
+  "name": "reel-break",
+  "owner": { "name": "Ryan Norin" },
+  "description": "Reels while Claude thinks, gone when it's done.",
+  "plugins": [
+    {
+      "name": "reel-break",
+      "source": "./",
+      "description": "Opens reels when you send a prompt and kills or pauses them the moment the answer is ready."
+    }
+  ]
+}
