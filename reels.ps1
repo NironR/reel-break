@@ -1,5 +1,5 @@
 param([string]$Hook)
-# Hook entry point: expand = /reels toggle, open = prompt sent, close = Claude finished or needs you.
+# Hook entry point: open = prompt sent (or /reels toggle), close = Claude finished or needs you.
 $ErrorActionPreference = 'SilentlyContinue'
 
 # Fixed path, not CLAUDE_PLUGIN_DATA: that changes with how the plugin was loaded, which would split your login across sessions.
@@ -10,6 +10,11 @@ $sites = @{
     youtube   = 'https://www.youtube.com/shorts'
     instagram = 'https://www.instagram.com/reels/'
     tiktok    = 'https://www.tiktok.com/foryou'
+}
+$logins = @{
+    youtube   = 'https://accounts.google.com/ServiceLogin?service=youtube&continue=https%3A%2F%2Fwww.youtube.com%2F'
+    instagram = 'https://www.instagram.com/accounts/login/'
+    tiktok    = 'https://www.tiktok.com/login'
 }
 $state = Get-Content $stateFile -Raw | ConvertFrom-Json
 if (-not $state) { $state = [pscustomobject]@{ mode = 'off'; site = 'youtube' } }
@@ -44,16 +49,26 @@ function Set-Playing([bool]$play) {
 }
 
 function Set-Mode([string[]]$words) {
+    $login = $false
     foreach ($a in $words) {
         $a = $a.ToLower()
-        if ($a -in 'kill', 'pause', 'off') { $state.mode = $a }
+        if ($a -eq 'login') { $login = $true }
+        elseif ($a -in 'kill', 'pause', 'off') { $state.mode = $a }
         elseif ($sites.ContainsKey($a)) { $state.site = $a }
     }
+    # Login turns reels off so no hook closes the window mid-login.
+    if ($login) { $state.mode = 'off' }
     if ($state.mode -eq 'off') { Stop-ReelsBrowser }
     New-Item -ItemType Directory -Force $data | Out-Null
     $state | ConvertTo-Json | Set-Content $stateFile
+    if ($login) {
+        # A normal window (address bar, no DevTools port): Google refuses sign-in when the port is open.
+        Start-Sleep 1
+        Start-Process msedge "--user-data-dir=`"$profileDir`" --no-first-run $($logins[$state.site])"
+        return "Opened a $($state.site) login window. Reels are off while you log in. When you're done, close it and run /reels kill $($state.site)."
+    }
     $status = if ($state.mode -eq 'off') { 'Reels off.' } else { "Reels on: $($state.mode) mode, $($state.site). They'll open with your next prompt." }
-    "$status Options: /reels kill|pause|off youtube|instagram|tiktok"
+    "$status Options: /reels kill|pause|off|login youtube|instagram|tiktok"
 }
 
 $in = [Console]::In.ReadToEnd() | ConvertFrom-Json

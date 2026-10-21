@@ -1,6 +1,6 @@
 ---
-description: Toggle reels while Claude thinks (kill|pause|off, youtube|instagram|tiktok)
-argument-hint: kill|pause|off [youtube|instagram|tiktok]
+description: Toggle reels while Claude thinks (kill|pause|off|login, youtube|instagram|tiktok)
+argument-hint: kill|pause|off|login [youtube|instagram|tiktok]
 ---
 reels-args: $ARGUMENTS
 

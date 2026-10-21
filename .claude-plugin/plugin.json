@@ -1,7 +1,7 @@
 {
   "name": "reel-break",
   "displayName": "Reel Break",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Opens reels when you send a prompt and kills or pauses them the moment the answer is ready. Toggle with /reels.",
   "author": { "name": "Ryan Norin" },
   "license": "MIT",
